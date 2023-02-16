@@ -1,5 +1,5 @@
-use reqwest::{Client, Response};
 use clap::{Parser, Subcommand};
+use reqwest::{Client, Response};
 
 /// CLI to manage internet access for students of BIT Mesra
 #[derive(Parser)]
@@ -14,6 +14,21 @@ enum Commands {
     Login {username: String, password: String},
     /// Logout from network
     Logout
+}
+
+async fn parser(res: Response) -> String {
+    let val = res.text().await;
+    match val {
+        Ok(result) => {
+            let message = result.split_once("<message><![CDATA[").unwrap().1
+                                .split_once("]]></message>").unwrap().0
+                                .to_string();
+            return message
+        }
+        Err(error) => {
+            panic!("{}", error)
+        }
+    }
 }
 
 async fn login(client: Client, credentials: (String, String)) -> Response {
@@ -44,22 +59,16 @@ async fn logout(client: Client) -> Response {
     }
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let cli = Cli::parse();
     let client = Client::new();
     match cli.command {
         Commands::Login { username, password } => {
-            println!("{}", "Logging in...");
-            let response = login(client, (username, password)).await;
-            print!("{}", response.text().await.unwrap());
-            println!("{}", "Logged in.");
+            println!("{}", parser(login(client, (username, password)).await).await);
         }
         Commands::Logout => {
-            println!("{}", "Logging out...");
-            let response = logout(client).await;
-            print!("{}", response.text().await.unwrap());
-            println!("{}", "Logged out.");
+            println!("{}", parser(logout(client).await).await);
         }
     }   
 }
