@@ -11,3 +11,4 @@ edition = "2021"
 reqwest = "0.11.13"
 tokio = { version = "1", features = ["macros"] }
 clap = { version = "4.1.4", features = ["derive"] }
+html-escape = "0.2.13"
