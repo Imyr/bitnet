@@ -1,6 +1,6 @@
 use std::process::exit;
 use clap::{Parser, Subcommand};
-use reqwest::{Client, Response};
+use reqwest::blocking::{Client, Response};
 use html_escape::decode_html_entities as decode;
 
 /// CLI to manage internet access for students of BIT Mesra
@@ -18,8 +18,8 @@ enum Commands {
     Logout
 }
 
-async fn parser(res: Response) -> String {
-    let val = res.text().await;
+fn parser(res: Response) -> String {
+    let val = res.text();
     match val {
         Ok(result) => {
             let message = decode(result
@@ -35,10 +35,10 @@ async fn parser(res: Response) -> String {
     }
 }
 
-async fn login(client: &Client, credentials: (&String, &String)) -> Response {
+fn login(client: &Client, credentials: (&String, &String)) -> Response {
     let login_url = "http://172.16.1.1:8090/login.xml";
     let form = [("mode", "191"), ("username", &credentials.0[..]), ("password", &credentials.1[..])];
-    let res = client.post(login_url).form(&form).send().await;
+    let res = client.post(login_url).form(&form).send();
     match res {
         Ok(result) => {
             return result
@@ -50,10 +50,10 @@ async fn login(client: &Client, credentials: (&String, &String)) -> Response {
     }
 }
 
-async fn logout(client: &Client) -> Response {
+fn logout(client: &Client) -> Response {
     let logout_url = "http://172.16.1.1:8090/logout.xml";
     let form = [("mode", "193"), ("username", " ")];
-    let res = client.post(logout_url).form(&form).send().await;
+    let res = client.post(logout_url).form(&form).send();
     match res {
         Ok(result) => {
             return result
@@ -65,16 +65,15 @@ async fn logout(client: &Client) -> Response {
     }
 }
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() {
+fn main() {
     let cli = Cli::parse();
     let client = Client::new();
     match cli.command {
         Commands::Login { username, password } => {
-            println!("{}", parser(login(&client, (&username, &password)).await).await.replace("{username}", &username));
+            println!("{}", parser(login(&client, (&username, &password))).replace("{username}", &username));
         }
         Commands::Logout => {
-            println!("{}", parser(logout(&client).await).await);
+            println!("{}", parser(logout(&client)));
         }
     }   
 }
